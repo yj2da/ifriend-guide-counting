@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이프렌드 27기 오프닝 세레모니 - 점수 관리</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-badge">i-FRIEND 27TH OPENING CEREMONY</div>
+      <h1 class="app-title">아이프렌드 27기 점수 관리</h1>
+      <p class="app-subtitle">조별 게임 및 개별점수 실시간 집계</p>
+    </header>
+
+    <!-- ========================================================= -->
+    <!-- 1. MAIN DASHBOARD VIEW -->
+    <!-- ========================================================= -->
+    <main id="view-main" class="view-section active">
+
+      <!-- 임원 점수 입력 -->
+      <div class="section-label">임원별 담당 조 점수 입력</div>
+      <div class="officers-grid">
+
+        <!-- 예진 -->
+        <div class="clean-card officer-card" onclick="openOfficerInput('yejin')">
+          <div>
+            <div class="officer-top">
+              <div class="officer-avatar-box">👩‍💼</div>
+              <span class="officer-badge-role">운영 임원</span>
+            </div>
+            <div class="officer-name">예진</div>
+            <div class="officer-teams-tag">담당: 1조 · 2조 · 3조</div>
+          </div>
+          <div class="officer-card-footer">
+            <span id="yejin-status-text">0/3개 조 입력완료</span>
+            <span>입력하기 →</span>
+          </div>
+        </div>
+
+        <!-- 민혁 -->
+        <div class="clean-card officer-card" onclick="openOfficerInput('minhyuk')">
+          <div>
+            <div class="officer-top">
+              <div class="officer-avatar-box">👨‍💼</div>
+              <span class="officer-badge-role">운영 임원</span>
+            </div>
+            <div class="officer-name">민혁</div>
+            <div class="officer-teams-tag">담당: 4조 · 5조 · 6조</div>
+          </div>
+          <div class="officer-card-footer">
+            <span id="minhyuk-status-text">0/3개 조 입력완료</span>
+            <span>입력하기 →</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 결과 조회 버튼 (진행 / 최종) -->
+      <div class="section-label">순위 및 결과 확인</div>
+      <div class="action-grid">
+
+        <!-- 진행 버튼 -->
+        <div class="clean-card action-card" onclick="showView('view-progress')">
+          <div class="action-icon-box">📊</div>
+          <div class="action-info">
+            <h4>진행 상황 보기</h4>
+            <p>게임별 순위 및 개별점수 현황</p>
+          </div>
+        </div>
+
+        <!-- 최종 버튼 -->
+        <div class="clean-card action-card final" onclick="showView('view-final')">
+          <div class="action-icon-box">🏆</div>
+          <div class="action-info">
+            <h4>최종 결과 발표</h4>
+            <p>모든 게임 합산 최종 순위 및 시상</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Bar -->
+      <div class="dashboard-footer">
+        <span id="main-summary-text">전체 <strong>0 / 6개 조</strong> 입력 완료</span>
+        <div style="display: flex; gap: 0.4rem;">
+          <button type="button" class="btn-quiet" onclick="loadSampleData()">샘플 데이터</button>
+          <button type="button" class="btn-quiet danger" onclick="openResetModal()">점수 초기화</button>
+        </div>
+      </div>
+
+    </main>
+
+
+    <!-- ========================================================= -->
+    <!-- 2. OFFICER / SCORE INPUT VIEW -->
+    <!-- ========================================================= -->
+    <section id="view-officer" class="view-section">
+
+      <div class="view-nav-bar">
+        <button type="button" class="btn-back" onclick="showView('view-main')">
+          ← 메인으로
+        </button>
+        <span class="view-heading" id="input-officer-title">예진 임원 점수 입력</span>
+        <div style="width: 75px;"></div>
+      </div>
+
+      <!-- 조 선택 탭 (1조, 2조, 3조) -->
+      <div class="team-tab-bar" id="team-tab-bar">
+        <!-- JS 동적 생성 -->
+      </div>
+
+      <!-- 점수 입력 폼 카드 -->
+      <div class="clean-card score-form-card">
+
+        <div class="form-title-bar">
+          <div class="form-team-title" id="current-team-name-title">1조 점수 입력</div>
+          <span class="live-sum-pill" id="current-team-sum-badge">합계: 0점</span>
+        </div>
+
+        <div class="form-info-tip">
+          미기입 시 0점으로 자동 처리됩니다. 직접 숫자를 입력하거나 ± 버튼을 이용하세요.
+        </div>
+
+        <!-- 3개 종목 게임 입력 -->
+        <div class="game-group">
+
+          <!-- 1. 빙고게임 -->
+          <div class="game-card-row">
+            <div class="game-card-header">
+              <div>
+                <span class="game-card-name">🎯 빙고게임</span>
+                <div class="game-rule-desc">기본 점수 입력</div>
+              </div>
+              <span class="game-card-tag">게임 1</span>
+            </div>
+            <div class="game-card-body">
+              <div class="input-unit-wrapper">
+                <input type="number" id="input-bingo" class="score-input" placeholder="0" min="0" step="1">
+                <span class="input-unit-label">점</span>
+              </div>
+              <div class="quick-btns">
+                <button type="button" class="btn-step minus" onclick="adjustScore('bingo', -10)">-10</button>
+                <button type="button" class="btn-step minus" onclick="adjustScore('bingo', -5)">-5</button>
+                <button type="button" class="btn-step" onclick="adjustScore('bingo', +5)">+5</button>
+                <button type="button" class="btn-step" onclick="adjustScore('bingo', +10)">+10</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 신문지탑 -->
+          <div class="game-card-row">
+            <div class="game-card-header">
+              <div>
+                <span class="game-card-name">🗼 신문지탑 (높이)</span>
+                <div class="game-rule-desc">높을수록 순위 높음 (1등 15점 · 2등 10점 · 3등 5점)</div>
+              </div>
+              <span class="game-card-tag">게임 2</span>
+            </div>
+            <div class="game-card-body">
+              <div class="input-unit-wrapper">
+                <input type="number" id="input-tower" class="score-input" placeholder="0" min="0" step="0.1">
+                <span class="input-unit-label">cm</span>
+              </div>
+              <div class="quick-btns">
+                <button type="button" class="btn-step minus" onclick="adjustScore('tower', -10)">-10</button>
+                <button type="button" class="btn-step minus" onclick="adjustScore('tower', -1)">-1</button>
+                <button type="button" class="btn-step" onclick="adjustScore('tower', +1)">+1</button>
+                <button type="button" class="btn-step" onclick="adjustScore('tower', +10)">+10</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 신문지공 -->
+          <div class="game-card-row">
+            <div class="game-card-header">
+              <div>
+                <span class="game-card-name">⚾ 신문지공 (둘레/크기)</span>
+                <div class="game-rule-desc">작을수록 순위 높음 (1등 15점 · 2등 10점 · 3등 5점)</div>
+              </div>
+              <span class="game-card-tag">게임 3</span>
+            </div>
+            <div class="game-card-body">
+              <div class="input-unit-wrapper">
+                <input type="number" id="input-ball" class="score-input" placeholder="0" min="0" step="0.1">
+                <span class="input-unit-label">cm</span>
+              </div>
+              <div class="quick-btns">
+                <button type="button" class="btn-step minus" onclick="adjustScore('ball', -5)">-5</button>
+                <button type="button" class="btn-step minus" onclick="adjustScore('ball', -1)">-1</button>
+                <button type="button" class="btn-step" onclick="adjustScore('ball', +1)">+1</button>
+                <button type="button" class="btn-step" onclick="adjustScore('ball', +5)">+5</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 개별점수 특화 섹션 (이름 + 점수 목록) -->
+        <div class="individual-section">
+          <div class="indiv-header">
+            <div class="indiv-title">
+              <span>⭐ 개별점수 (팀원별)</span>
+            </div>
+            <button type="button" class="btn-add-person" onclick="addIndividualRow()">
+              + 인원 추가
+            </button>
+          </div>
+
+          <div id="indiv-list-container" class="indiv-list">
+            <!-- JS 동적 생성: [이름] [점수] [삭제] -->
+          </div>
+        </div>
+
+        <!-- 액션 버튼 -->
+        <div class="form-submit-group">
+          <button type="button" class="btn-main-save" onclick="handleSaveCurrentScore()">
+            점수 저장
+          </button>
+          <button type="button" class="btn-next-step" onclick="handleNextTeam()">
+            다음 조로 이동 →
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- 3. PROGRESS VIEW -->
+    <!-- ========================================================= -->
+    <section id="view-progress" class="view-section">
+
+      <div class="view-nav-bar">
+        <button type="button" class="btn-back" onclick="showView('view-main')">
+          ← 메인으로
+        </button>
+        <span class="view-heading">실시간 게임별 순위</span>
+        <div style="width: 75px;"></div>
+      </div>
+
+      <!-- 탭 바 -->
+      <div class="tab-pills-row">
+        <button type="button" class="tab-pill-btn active" data-tab="all" onclick="setRankingTab('all')">전체 보기</button>
+        <button type="button" class="tab-pill-btn" data-tab="bingo" onclick="setRankingTab('bingo')">🎯 빙고게임</button>
+        <button type="button" class="tab-pill-btn" data-tab="tower" onclick="setRankingTab('tower')">🗼 신문지탑</button>
+        <button type="button" class="tab-pill-btn" data-tab="ball" onclick="setRankingTab('ball')">⚾ 신문지공</button>
+        <button type="button" class="tab-pill-btn" data-tab="individual" onclick="setRankingTab('individual')">⭐ 개별점수</button>
+      </div>
+
+      <!-- 순위표 렌더링 컨테이너 -->
+      <div id="ranking-container">
+        <!-- JS 동적 렌더링 -->
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- 4. FINAL RESULTS VIEW -->
+    <!-- ========================================================= -->
+    <section id="view-final" class="view-section">
+
+      <div class="view-nav-bar">
+        <button type="button" class="btn-back" onclick="showView('view-main')">
+          ← 메인으로
+        </button>
+        <button type="button" class="btn-back" onclick="Confetti.start(4000)">
+          🎉 폭죽 다시 터뜨리기
+        </button>
+      </div>
+
+      <div class="final-header-banner">
+        <h2 class="final-header-title">🏆 최종 결과 발표</h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">3개 게임(빙고 · 신문지탑 · 신문지공)을 합산한 최종 조별 순위입니다.</p>
+      </div>
+
+      <!-- 상위 1, 2, 3위 단정하고 세련된 카드 -->
+      <div class="top3-cards-grid">
+
+        <!-- 2위 -->
+        <div class="top3-card second">
+          <div class="top3-badge">🥈</div>
+          <div class="top3-rank-label">2위</div>
+          <div class="top3-team-name" id="final-2nd-name">-</div>
+          <div class="top3-total-score" id="final-2nd-score">0점</div>
+        </div>
+
+        <!-- 1위 -->
+        <div class="top3-card first">
+          <div class="top3-badge">🥇</div>
+          <div class="top3-rank-label">우승 · 1위</div>
+          <div class="top3-team-name" id="final-1st-name">-</div>
+          <div class="top3-total-score" id="final-1st-score">0점</div>
+        </div>
+
+        <!-- 3위 -->
+        <div class="top3-card third">
+          <div class="top3-badge">🥉</div>
+          <div class="top3-rank-label">3위</div>
+          <div class="top3-team-name" id="final-3rd-name">-</div>
+          <div class="top3-total-score" id="final-3rd-score">0점</div>
+        </div>
+
+      </div>
+
+      <!-- 상세 합산 표 -->
+      <div class="clean-card final-table-card">
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-title);">전체 조별 점수 합산표</h3>
+        <div style="overflow-x: auto;">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>조 (담당)</th>
+                <th>빙고게임</th>
+                <th>신문지탑</th>
+                <th>신문지공</th>
+                <th>최종 합계</th>
+              </tr>
+            </thead>
+            <tbody id="final-table-body">
+              <!-- JS 렌더링 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">알림</div>
+
+  <!-- Reset Modal -->
+  <div id="reset-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>점수를 초기화하시겠습니까?</h3>
+      <p>모든 조의 입력 점수 및 개별점수 명단이 삭제되며 0점으로 초기화됩니다.</p>
+      <div class="modal-btn-row">
+        <button type="button" class="btn-modal cancel" onclick="closeResetModal()">취소</button>
+        <button type="button" class="btn-modal confirm" onclick="confirmResetData()">초기화</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="confetti.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

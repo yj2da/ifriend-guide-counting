@@ -1,0 +1,62 @@
+{
+  "1": {
+    "team": 1,
+    "name": "1조",
+    "officer": "예진",
+    "bingo": 0,
+    "tower": 0,
+    "ball": 0,
+    "individualEntries": [],
+    "updatedAt": null
+  },
+  "2": {
+    "team": 2,
+    "name": "2조",
+    "officer": "예진",
+    "bingo": 0,
+    "tower": 0,
+    "ball": 0,
+    "individualEntries": [],
+    "updatedAt": null
+  },
+  "3": {
+    "team": 3,
+    "name": "3조",
+    "officer": "예진",
+    "bingo": 0,
+    "tower": 0,
+    "ball": 0,
+    "individualEntries": [],
+    "updatedAt": null
+  },
+  "4": {
+    "team": 4,
+    "name": "4조",
+    "officer": "민혁",
+    "bingo": 0,
+    "tower": 0,
+    "ball": 0,
+    "individualEntries": [],
+    "updatedAt": null
+  },
+  "5": {
+    "team": 5,
+    "name": "5조",
+    "officer": "민혁",
+    "bingo": 0,
+    "tower": 0,
+    "ball": 0,
+    "individualEntries": [],
+    "updatedAt": null
+  },
+  "6": {
+    "team": 6,
+    "name": "6조",
+    "officer": "민혁",
+    "bingo": 0,
+    "tower": 0,
+    "ball": 0,
+    "individualEntries": [],
+    "updatedAt": null
+  }
+}
