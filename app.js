@@ -874,6 +874,14 @@ async function loadSampleData() {
    서버 실시간 동기화 (SSE & Polling Fallback)
    ======================================================== */
 function initRealtimeSync() {
+  const isStaticHosting = window.location.hostname.endsWith('github.io') || window.location.protocol === 'file:';
+
+  // GitHub Pages 정적 배포 환경에서는 로컬 스토리지를 기본 저장소로 사용
+  if (isStaticHosting) {
+    console.log('Running on Static Hosting (GitHub Pages / Local file). LocalStorage mode active.');
+    return;
+  }
+
   // 1. 초기 1회 서버 점수 로드
   fetch('/api/scores')
     .then(res => res.json())
