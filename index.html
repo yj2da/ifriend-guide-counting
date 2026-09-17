@@ -16,6 +16,14 @@
       <div class="header-badge">i-FRIEND 27TH OPENING CEREMONY</div>
       <h1 class="app-title">아이프렌드 27기 점수 관리</h1>
       <p class="app-subtitle">조별 게임 및 개별점수 실시간 집계</p>
+
+      <!-- 실시간 Firebase / 서버 동기화 뱃지 -->
+      <div class="sync-badge-container">
+        <div class="sync-status-pill" id="sync-status-pill" onclick="openFirebaseModal()" title="클릭하여 실시간 동기화 설정">
+          <span class="status-dot" id="sync-status-dot"></span>
+          <span id="sync-status-label">동기화 상태 확인 중...</span>
+        </div>
+      </div>
     </header>
 
     <!-- ========================================================= -->
@@ -351,8 +359,32 @@
     </div>
   </div>
 
+  <!-- Firebase Settings Modal -->
+  <div id="firebase-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>🔥 Firebase 실시간 동기화 설정</h3>
+      <p>와이파이가 달라도, LTE/5G 어디서든 모든 폰에서 점수를 실시간으로 함께 보려면 Firebase Realtime Database URL을 입력하세요.</p>
+
+      <input type="url" id="modal-firebase-url" class="input-firebase-url" placeholder="https://[프로젝트ID]-default-rtdb.firebaseio.com">
+
+      <div class="firebase-guide-box">
+        <strong>💡 1분 무료 설정 방법:</strong><br>
+        1. <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary); text-decoration: underline;">Firebase 콘솔</a>에서 프로젝트 생성 (무료)<br>
+        2. <strong>빌드 > Realtime Database</strong> 만들기 클릭<br>
+        3. <strong>규칙(Rules)</strong> 탭에서 <code>".read": true, ".write": true</code> 설정<br>
+        4. 상단의 Database URL을 복사하여 위 입력란에 붙여넣기!
+      </div>
+
+      <div class="modal-btn-row">
+        <button type="button" class="btn-modal cancel" onclick="closeFirebaseModal()">닫기</button>
+        <button type="button" class="btn-modal confirm" style="background: var(--primary);" onclick="saveFirebaseUrlFromModal()">연동 저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="confetti.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -74,19 +74,39 @@ function loadScores() {
   return createInitialScores();
 }
 
+function getFirebaseUrl() {
+  let url = localStorage.getItem('ifriend_firebase_url') || window.FIREBASE_CONFIG?.databaseURL || '';
+  url = url.trim();
+  if (url.endsWith('/')) url = url.slice(0, -1);
+  return url;
+}
+
 function saveScores() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
     updateMainDashboard();
 
-    // 서버로 실시간 전송
-    fetch('/api/scores', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scores: state.scores })
-    }).catch(err => {
-      console.warn('Server sync failed, saved to local storage:', err);
-    });
+    // 1. Firebase Realtime Database로 전송 (LTE, 5G, 어디서든 실시간 동기화)
+    const fireUrl = getFirebaseUrl();
+    if (fireUrl) {
+      fetch(`${fireUrl}/scores.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.scores)
+      }).catch(err => {
+        console.warn('Firebase sync failed:', err);
+      });
+    }
+
+    // 2. 로컬 백엔드 서버로 전송 (로컬 서버 구동 시)
+    const isStatic = window.location.hostname.endsWith('github.io') || window.location.protocol === 'file:';
+    if (!isStatic) {
+      fetch('/api/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scores: state.scores })
+      }).catch(() => {});
+    }
   } catch (e) {
     console.error('Failed to save scores:', e);
   }
@@ -871,80 +891,128 @@ async function loadSampleData() {
 }
 
 /* ========================================================
-   서버 실시간 동기화 (SSE & Polling Fallback)
+   실시간 동기화 엔진 (Firebase Realtime DB & Local Server)
    ======================================================== */
+let currentEventSource = null;
+
+function updateSyncBadgeUI(isConnected, text) {
+  const pill = document.getElementById('sync-status-pill');
+  const label = document.getElementById('sync-status-label');
+  if (!pill || !label) return;
+
+  if (isConnected) {
+    pill.classList.add('connected');
+    label.textContent = text;
+  } else {
+    pill.classList.remove('connected');
+    label.textContent = text;
+  }
+}
+
 function initRealtimeSync() {
+  const fireUrl = getFirebaseUrl();
   const isStaticHosting = window.location.hostname.endsWith('github.io') || window.location.protocol === 'file:';
 
-  // GitHub Pages 정적 배포 환경에서는 로컬 스토리지를 기본 저장소로 사용
-  if (isStaticHosting) {
-    console.log('Running on Static Hosting (GitHub Pages / Local file). LocalStorage mode active.');
+  // 1. Firebase Database URL이 등록되어 있는 경우 (LTE, 5G, 모든 기기 실시간 동기화)
+  if (fireUrl) {
+    updateSyncBadgeUI(true, '🔥 Firebase 실시간 연동 중 (LTE·5G 지원)');
+
+    // 1-1. 초기 최신 데이터 1회 가져오기
+    fetch(`${fireUrl}/scores.json`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && typeof data === 'object') {
+          state.scores = data;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
+          refreshCurrentActiveView();
+        }
+      })
+      .catch(err => {
+        console.warn('Initial Firebase fetch error:', err);
+      });
+
+    // 1-2. Firebase Realtime SSE 스트림 연결
+    if (typeof EventSource !== 'undefined') {
+      try {
+        if (currentEventSource) currentEventSource.close();
+        currentEventSource = new EventSource(`${fireUrl}/scores.json`);
+
+        currentEventSource.addEventListener('put', (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload && payload.path === '/' && payload.data) {
+              state.scores = payload.data;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
+              refreshCurrentActiveView();
+            } else if (payload && payload.path && payload.path !== '/') {
+              // 하위 필드 변경 시 전체 재조회
+              fetch(`${fireUrl}/scores.json`)
+                .then(r => r.json())
+                .then(d => {
+                  if (d) {
+                    state.scores = d;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
+                    refreshCurrentActiveView();
+                  }
+                });
+            }
+          } catch (e) {
+            console.error('Firebase SSE parse error:', e);
+          }
+        });
+
+        currentEventSource.onerror = () => {
+          console.warn('Firebase EventSource reconnecting...');
+        };
+      } catch (e) {
+        console.warn('Firebase EventSource init failed:', e);
+      }
+    }
     return;
   }
 
-  // 1. 초기 1회 서버 점수 로드
-  fetch('/api/scores')
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.scores) {
-        state.scores = data.scores;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
-        refreshCurrentActiveView();
-      }
-    })
-    .catch(err => {
-      console.warn('Initial server fetch failed, using local storage:', err);
-    });
+  // 2. Firebase 미설정 상태에서 로컬 서버(Node.js server.js)로 실행 중인 경우
+  if (!isStaticHosting) {
+    updateSyncBadgeUI(true, '💻 로컬 서버 연동 중 (동일 Wi-Fi)');
 
-  // 2. Server-Sent Events (SSE) 실시간 푸시
-  if (typeof EventSource !== 'undefined') {
-    try {
-      const evtSource = new EventSource('/api/events');
-
-      evtSource.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload && payload.scores) {
-            state.scores = payload.scores;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
-            refreshCurrentActiveView();
-          }
-        } catch (e) {
-          console.error('SSE message parse error:', e);
-        }
-      };
-
-      evtSource.onerror = (err) => {
-        console.warn('SSE connection interrupted, fallback polling will keep syncing.');
-      };
-    } catch (e) {
-      console.warn('SSE init failed:', e);
-    }
-  }
-
-  // 3. 안정성을 위한 가벼운 3초 주기 polling fallback
-  setInterval(() => {
     fetch('/api/scores')
       .then(res => res.json())
       .then(data => {
         if (data && data.scores) {
-          const serverStr = JSON.stringify(data.scores);
-          const currentStr = JSON.stringify(state.scores);
-          if (serverStr !== currentStr) {
-            state.scores = data.scores;
-            localStorage.setItem(STORAGE_KEY, serverStr);
-            refreshCurrentActiveView();
-          }
+          state.scores = data.scores;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
+          refreshCurrentActiveView();
         }
       })
       .catch(() => {});
-  }, 3000);
+
+    if (typeof EventSource !== 'undefined') {
+      try {
+        if (currentEventSource) currentEventSource.close();
+        currentEventSource = new EventSource('/api/events');
+
+        currentEventSource.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload && payload.scores) {
+              state.scores = payload.scores;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
+              refreshCurrentActiveView();
+            }
+          } catch (e) {}
+        };
+      } catch (e) {}
+    }
+    return;
+  }
+
+  // 3. GitHub Pages 정적 배포 환경에서 아직 Firebase 미연동 상태인 경우
+  updateSyncBadgeUI(false, '⚙️ 실시간 동기화 설정 (Firebase 연동 필요)');
 }
 
 function refreshCurrentActiveView() {
   updateMainDashboard();
 
-  // 현재 활성화된 뷰가 점수 입력창이면 갱신 (단, 사용자가 포커스 중일 땐 방해하지 않음)
   const isOfficerActive = document.getElementById('view-officer')?.classList.contains('active');
   const hasFocusedInput = document.activeElement && (document.activeElement.tagName === 'INPUT');
 
@@ -955,6 +1023,50 @@ function refreshCurrentActiveView() {
     renderProgressRanking(state.currentRankingTab);
   } else if (document.getElementById('view-final')?.classList.contains('active')) {
     renderFinalResults();
+  }
+}
+
+/* ========================================================
+   Firebase 설정 모달 제어
+   ======================================================== */
+function openFirebaseModal() {
+  const modal = document.getElementById('firebase-modal');
+  const input = document.getElementById('modal-firebase-url');
+  if (modal) {
+    if (input) input.value = getFirebaseUrl();
+    modal.classList.add('active');
+  }
+}
+
+function closeFirebaseModal() {
+  const modal = document.getElementById('firebase-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function saveFirebaseUrlFromModal() {
+  const input = document.getElementById('modal-firebase-url');
+  if (!input) return;
+
+  let url = input.value.trim();
+  if (url.endsWith('/')) url = url.slice(0, -1);
+
+  if (url && !url.startsWith('https://')) {
+    alert('올바른 Firebase Realtime Database URL(https://...)을 입력해주세요.');
+    return;
+  }
+
+  if (url) {
+    localStorage.setItem('ifriend_firebase_url', url);
+    closeFirebaseModal();
+    showToast('🔥 Firebase 실시간 동기화가 설정되었습니다!');
+    // 즉시 현재 점수를 Firebase에 최초 업로드 및 동기화 시작
+    saveScores();
+    initRealtimeSync();
+  } else {
+    localStorage.removeItem('ifriend_firebase_url');
+    closeFirebaseModal();
+    showToast('Firebase 설정이 해제되었습니다.');
+    initRealtimeSync();
   }
 }
 
